@@ -333,6 +333,35 @@ export class Model {
     return f;
   }
 
+  /** Factorisation of K plus extra springs k on the given free DOFs (cached). */
+  factorWithSprings(dofs: number[], k: number[]): LDLT {
+    const key = `k:${dofs.join(',')}:${k.map((v) => v.toPrecision(8)).join(',')}`;
+    let f = this.factorCache.get(key);
+    if (!f) {
+      const A = this.K.clone();
+      dofs.forEach((d, i) => A.add(d, d, k[i]));
+      f = new LDLT(A.constrained(this.mask));
+      if (this.factorCache.size > 6) this.factorCache.clear();
+      this.factorCache.set(key, f);
+    }
+    return f;
+  }
+
+  /**
+   * Static solution with springs k on `dofs` whose far ends are held at `target` (the pointer).
+   * This is how the structure is pulled: it follows where it is flexible and resists where it is stiff.
+   */
+  solveWithSprings(lambda: ArrayLike<number>, dofs: number[], k: number[], target: number[]): Float64Array {
+    const fac = this.factorWithSprings(dofs, k);
+    const F = this.loadVector(lambda);
+    dofs.forEach((d, i) => (F[d] += k[i] * target[i]));
+    const up = this.prescribed(lambda);
+    const Ku = this.K.mul(up);
+    const rhs = new Float64Array(this.nDof);
+    for (let d = 0; d < this.nDof; d++) rhs[d] = this.mask[d] ? up[d] : F[d] - Ku[d];
+    return fac.solve(rhs);
+  }
+
   /** Assemble F = Σ λ_l F_l. */
   loadVector(lambda: ArrayLike<number>, out: Float64Array = new Float64Array(this.nDof)): Float64Array {
     out.fill(0);
@@ -394,7 +423,7 @@ export class Model {
    * Local end displacements (with released rotations recovered) and local end forces
    * (forces on the element) for element e.
    */
-  elemState(e: number, u: Float64Array, lambda: ArrayLike<number>, d = new Float64Array(6), f = new Float64Array(6)): { d: Float64Array; f: Float64Array } {
+  elemState(e: number, u: Float64Array, lambda: ArrayLike<number>, d: Float64Array = new Float64Array(6), f: Float64Array = new Float64Array(6)): { d: Float64Array; f: Float64Array } {
     const E = this.elems[e];
     const g = [0, 0, 0, 0, 0, 0];
     for (let p = 0; p < 6; p++) g[p] = u[E.dofs[p]];

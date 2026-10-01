@@ -13,9 +13,11 @@ const RAMP = 0.6;
 export interface Grab {
   node: number;
   dofs: number[];
-  /** Prescribed displacement of the grabbed node (m). */
+  /** Stiffness of the "rubber band" between the pointer and the node (kN/m). */
+  k: number;
+  /** Where the pointer holds the far end of the band, as a displacement of the node (m). */
   disp: Vec2;
-  /** Force the pointer applies to hold it there (kN). */
+  /** Force the band applies to the structure (kN). */
   force: Vec2;
 }
 
@@ -54,8 +56,12 @@ export class Sim {
   refDisp = 0;
   /** Largest |M|, |V|, |N| under all loads at full value. */
   refForce = { M: 0, V: 0, N: 0 };
+  /** Sum of the magnitudes of all loads at full value (kN), a yardstick for the diagrams. */
+  refLoad = 0;
   /** Bumped whenever the state changes, so views know to redraw. */
   version = 0;
+  /** Bumped whenever the static answer changes (loads toggled or moved). */
+  staticRev = 0;
 
   constructor(spec: Spec) {
     this.spec = spec;
@@ -98,6 +104,7 @@ export class Sim {
     const uRef = m.solve(all);
     this.refDisp = maxTranslation(m, uRef);
     this.refForce = this.forceExtremes(uRef, all);
+    this.refLoad = totalLoad(this.spec, m);
 
     // Fundamental period by inverse iteration on K⁻¹M.
     const fac = m.factor();
@@ -192,6 +199,7 @@ export class Sim {
     if (this.target[l] === goal && this.lambda[l] === goal) return;
     this.target[l] = goal;
     this.staticCache = null;
+    this.staticRev++;
     if (!animate) {
       this.lambda[l] = goal;
       this.rampStart[l] = -Infinity;
@@ -216,6 +224,7 @@ export class Sim {
     if (!this.ok) return;
     this.model.rebuildLoad(l);
     this.staticCache = null;
+    this.staticRev++;
     this.refreshScaleIfLarger();
     if (this.resting && !this.grab) this.snapToStatic();
     else this.touch();
@@ -266,6 +275,10 @@ export class Sim {
     return [0, 1].map((k) => m.dof(node, k)).filter((d) => !m.mask[d]);
   }
 
+  /**
+   * Take hold of a node with a spring nine times stiffer than the node's softest direction:
+   * dragged that way it follows the pointer closely, dragged along a stiff direction it hardly moves.
+   */
   startGrab(node: number): boolean {
     const dofs = this.grabDofs(node);
     if (!dofs.length) return false;
@@ -274,30 +287,46 @@ export class Sim {
       this.rampStart[l] = -Infinity;
     }
     const m = this.model;
+    const fac = m.factor();
+    const flex = dofs.map((d) => {
+      const e = new Float64Array(m.nDof);
+      e[d] = 1;
+      const u = fac.solve(e);
+      return dofs.map((dd) => u[dd]);
+    });
+    let lmax: number;
+    if (dofs.length === 1) {
+      lmax = flex[0][0];
+    } else {
+      const a = flex[0][0];
+      const b = (flex[0][1] + flex[1][0]) / 2;
+      const d = flex[1][1];
+      lmax = (a + d) / 2 + Math.sqrt(((a - d) / 2) ** 2 + b * b);
+    }
+    const k = 9 / Math.max(lmax, 1e-300);
     const disp: Vec2 = [this.u[m.dof(node, 0)], this.u[m.dof(node, 1)]];
-    this.grab = { node, dofs, disp, force: [0, 0] };
+    this.grab = { node, dofs, k, disp, force: [0, 0] };
     this.dragTo(disp);
     return true;
   }
 
-  /** Hold the grabbed node at displacement `disp` (m) and solve statically. */
+  /** Move the pointer end of the band to displacement `disp` (m) and solve statically. */
   dragTo(disp: Vec2): void {
     const g = this.grab;
     if (!g) return;
     const m = this.model;
     g.disp = [disp[0], disp[1]];
-    const extra = g.dofs.map((dof) => ({ dof, value: dof === m.dof(g.node, 0) ? disp[0] : disp[1] }));
+    const fx = m.dof(g.node, 0);
+    const targets = g.dofs.map((dof) => (dof === fx ? disp[0] : disp[1]));
     try {
-      this.u = m.solve(this.lambda, extra);
+      this.u = m.solveWithSprings(this.lambda, g.dofs, g.dofs.map(() => g.k), targets);
     } catch (err) {
       if (!(err instanceof MechanismError)) throw err;
       return;
     }
-    const Ku = m.K.mul(this.u);
-    const F = m.loadVector(this.lambda);
-    const fx = m.dof(g.node, 0);
-    const fy = m.dof(g.node, 1);
-    g.force = [g.dofs.includes(fx) ? Ku[fx] - F[fx] : 0, g.dofs.includes(fy) ? Ku[fy] - F[fy] : 0];
+    const force: Vec2 = [0, 0];
+    g.dofs.forEach((dof, i) => (force[dof === fx ? 0 : 1] = g.k * (targets[i] - this.u[dof])));
+    g.force = force;
     this.v.fill(0);
     this.a.fill(0);
     this.resting = false;
@@ -395,8 +424,25 @@ export class Sim {
       this.lambda[l] = on;
     });
     this.staticCache = null;
+    this.staticRev++;
     if (this.ok) this.snapToStatic();
   }
+}
+
+/** Σ|load|: point loads, distributed loads × loaded length, couples ÷ size. Settlements count as nothing. */
+export function totalLoad(spec: Spec, m: Model): number {
+  let W = 0;
+  for (const ld of spec.loads) {
+    if (ld.kind === 'point') W += Math.hypot(ld.F[0], ld.F[1]);
+    else if (ld.kind === 'moment') W += Math.abs(ld.M) / m.size;
+    else if (ld.kind === 'line') {
+      const w = typeof ld.w === 'number' ? Math.abs(ld.w) : Math.hypot(ld.w[0], ld.w[1]);
+      const [t1, t2] = ld.span ?? [0, 1];
+      const [r1, r2] = ld.ramp ?? [1, 1];
+      for (const mi of ld.members) W += w * (t2 - t1) * m.memberLength[mi] * (Math.abs(r1) + Math.abs(r2)) / 2;
+    }
+  }
+  return W;
 }
 
 export function maxTranslation(m: Model, u: Float64Array): number {

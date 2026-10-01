@@ -255,12 +255,24 @@ describe('frames and trusses', () => {
 describe('interaction and dynamics', () => {
   const cantilever = (): Spec => beam([0, 5], [{ node: 0, kind: 'fixed' }], [{ kind: 'point', member: 0, t: 1, F: [0, -20] }]);
 
-  it('grabbing the tip needs 3EIδ/L³', () => {
+  it('pulling the tip takes 3EIδ/L³ and the tip follows the pointer closely', () => {
     const sim = new Sim(cantilever());
     sim.setLoad(0, false, false);
     expect(sim.startGrab(1)).toBe(true);
     sim.dragTo([0, 0.01]);
-    close(sim.grab!.force[1], (3 * EI * 0.01) / 125, 1e-6);
+    const tip = sim.u[sim.model.dof(1, 1)];
+    expect(tip).toBeGreaterThan(0.0085);
+    expect(tip).toBeLessThan(0.01);
+    close(sim.grab!.force[1], (3 * EI * tip) / 125, 1e-6);
+  });
+
+  it('pulling along the beam barely moves it', () => {
+    const sim = new Sim(cantilever());
+    sim.setLoad(0, false, false);
+    sim.startGrab(1);
+    sim.dragTo([0.01, 0]);
+    // The band is 9× the bending stiffness, but EA/L is ~330× it: the tip moves under 5% of the pull.
+    expect(Math.abs(sim.u[sim.model.dof(1, 0)])).toBeLessThan(0.05 * 0.01);
   });
 
   it('springs back to equilibrium after release', () => {

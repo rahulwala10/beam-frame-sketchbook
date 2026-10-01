@@ -80,6 +80,8 @@ export interface Example {
   /** Things to look for while playing with it. */
   notes: string[];
   params?: Param[];
+  /** Multiplies the default deflection exaggeration (1 = deflections drawn at ~9% of the structure's size). */
+  exaggerate?: number;
   build(p: Params): Spec;
   checks?(c: CheckContext): Check[];
 }

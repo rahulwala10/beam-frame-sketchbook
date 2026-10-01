@@ -47,6 +47,7 @@ const archLoad = range('w', 'Load', 2, 20, 1, 10, 'kN/m');
 export const trusses: Example[] = [
   {
     id: 'pratt-truss',
+    exaggerate: 0.5,
     sheet: 'trusses',
     title: 'Pratt truss',
     blurb: 'Six panels, pin-jointed, loaded at the bottom panel points. Diagonals slope down towards mid-span.',
@@ -67,6 +68,7 @@ export const trusses: Example[] = [
   },
   {
     id: 'howe-truss',
+    exaggerate: 0.5,
     sheet: 'trusses',
     title: 'Howe truss',
     blurb: 'The same truss with the diagonals turned the other way.',
@@ -85,6 +87,7 @@ export const trusses: Example[] = [
   },
   {
     id: 'warren-truss',
+    exaggerate: 0.5,
     sheet: 'trusses',
     title: 'Warren truss',
     blurb: 'Equilateral-ish triangles with no verticals.',
@@ -104,6 +107,7 @@ export const trusses: Example[] = [
   },
   {
     id: 'king-post',
+    exaggerate: 0.5,
     sheet: 'trusses',
     title: 'King post truss',
     blurb: 'Two rafters, a tie and a king post: the oldest roof truss there is.',
@@ -148,6 +152,7 @@ export const trusses: Example[] = [
   },
   {
     id: 'wall-bracket',
+    exaggerate: 0.5,
     sheet: 'trusses',
     title: 'Wall bracket truss',
     blurb: 'A cantilever truss pinned to a wall at two points, carrying a load at its tip.',
