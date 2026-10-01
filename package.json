@@ -1,0 +1,21 @@
+{
+  "name": "beams-and-frames",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Interactive sketch sheets of beams, frames, trusses and arches, solved live in the browser by a small finite element engine.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "build:single": "tsc --noEmit && vite build --mode single",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "^8.0.0",
+    "vite-plugin-singlefile": "^2.3.3",
+    "vitest": "^5.0.3"
+  }
+}
