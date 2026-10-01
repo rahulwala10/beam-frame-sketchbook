@@ -416,7 +416,7 @@ export class Model {
   }
 
   /** Internal forces [N, V, M] at local x of element e. */
-  internal(e: number, f: Float64Array, loads: ScaledLoad[], x: number, right: boolean, out = new Float64Array(3)): Float64Array {
+  internal(f: Float64Array, loads: ScaledLoad[], x: number, right: boolean, out = new Float64Array(3)): Float64Array {
     return internalAt(f, loads, x, right, out);
   }
 }

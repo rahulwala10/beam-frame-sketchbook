@@ -101,7 +101,7 @@ export class Sim {
 
     // Fundamental period by inverse iteration on K⁻¹M.
     const fac = m.factor();
-    let x = new Float64Array(n);
+    let x: Float64Array = new Float64Array(n);
     if (this.refDisp > 0) x.set(uRef);
     else for (let d = 0; d < n; d++) x[d] = m.mask[d] ? 0 : 1;
     let omega2 = 1;
@@ -167,7 +167,7 @@ export class Sim {
       }
       for (const x of xs) {
         for (const right of [false, true]) {
-          m.internal(e, f, loads, x, right, r);
+          m.internal(f, loads, x, right, r);
           out.N = Math.max(out.N, Math.abs(r[0]));
           out.V = Math.max(out.V, Math.abs(r[1]));
           out.M = Math.max(out.M, Math.abs(r[2]));

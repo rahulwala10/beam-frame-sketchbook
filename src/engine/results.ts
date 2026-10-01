@@ -77,7 +77,7 @@ export function analyze(model: Model, u: Float64Array, lambda: ArrayLike<number>
         if (Math.abs(x - lastX) < 1e-12 && right === lastRight) continue;
         lastX = x;
         lastRight = right;
-        model.internal(e, f, loads, x, right, r);
+        model.internal(f, loads, x, right, r);
         const X = E.x0 + x;
         res.x.push(X);
         res.N.push(r[0]);
