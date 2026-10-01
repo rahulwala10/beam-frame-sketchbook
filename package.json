@@ -2,6 +2,7 @@
   "name": "beams-and-frames",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "Interactive sketch sheets of beams, frames, trusses and arches, solved live in the browser by a small finite element engine.",
   "type": "module",
   "scripts": {

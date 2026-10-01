@@ -1,5 +1,7 @@
 # Beam & Frame Sketchbook
 
+**Live site:** https://rahulwala10.github.io/beam-frame-sketchbook/
+
 Sixty-six beams, frames, trusses and arches on graph-paper sheets, each one a live finite element model running in your browser.
 
 Grab any point on a structure and pull it, then let go and watch it spring back. Tap a load arrow to apply or remove it, or drag it along the members. Switch between bending moment, shear and axial force, and open any structure for sliders, reactions and textbook hand checks.
@@ -121,6 +123,10 @@ The test suite picks the new structure up automatically.
 - Axial force is positive in tension.
 - Reactions are the forces the supports apply to the structure.
 
+## Deployment
+
+Every push to `main` runs the tests and publishes `dist/` to GitHub Pages (`.github/workflows/pages.yml`). In the repository settings, set **Pages → Source** to **GitHub Actions** once.
+
 ## License
 
-Not chosen yet.
+MIT. See [LICENSE](LICENSE).
