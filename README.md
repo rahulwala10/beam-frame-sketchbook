@@ -125,7 +125,7 @@ The test suite picks the new structure up automatically.
 
 ## Deployment
 
-Every push to `main` runs the tests and publishes `dist/` to GitHub Pages (`.github/workflows/pages.yml`). In the repository settings, set **Pages → Source** to **GitHub Actions** once.
+Every push to `main` runs the tests, builds the site and publishes `dist/` to the `gh-pages` branch, which GitHub Pages serves (`.github/workflows/pages.yml`).
 
 ## License
 
